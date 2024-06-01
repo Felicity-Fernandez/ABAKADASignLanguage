@@ -368,7 +368,8 @@ class SignLanguageApp(App):
 
 # Run the Kivy application
 if __name__ == '__main__':
-    from kivy.app import App
+    SignLanguageApp().run()
+    """from kivy.app import App
 
     class TestApp(App):
         def build(self):
@@ -381,4 +382,4 @@ if __name__ == '__main__':
             ])
             return screen
 
-    TestApp().run()
+    TestApp().run()"""
