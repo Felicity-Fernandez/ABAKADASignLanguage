@@ -50,7 +50,7 @@ class MenuScreen(Screen):
         
         # Background image
         with self.canvas.before:
-            self.bg = Rectangle(source='bg.png', pos=self.pos, size=self.size)
+            self.bg = Rectangle(source='bg5.png', pos=self.pos, size=self.size)
             self.bind(size=self._update_bg, pos=self._update_bg)
 
         # Add logo image
@@ -70,8 +70,9 @@ class MenuScreen(Screen):
         button4 = RoundedButton(text="HATIIN SA MGA PANTIG", font_size=20, size_hint=(None, None), size=(250, 30))
 
         # Bind buttons to transition to Screens
-        button3.bind(on_release=lambda x: setattr(self.manager, 'current', 'pinasok_na_salita'))
         button2.bind(on_release=lambda x: setattr(self.manager, 'current', 'second'))  # Go to the next page when button2 is clicked
+        button3.bind(on_release=lambda x: setattr(self.manager, 'current', 'pinasok_na_salita'))
+        button4.bind(on_release=lambda x: setattr(self.manager, 'current', 'hatiin_sa_mga_pantig'))
 
         button_layout.add_widget(button1)
         button_layout.add_widget(button2)
@@ -97,7 +98,7 @@ class SecondScreen(Screen):
 
         # Background image
         with self.canvas.before:
-            self.bg = Rectangle(source='bg3.png', pos=self.pos, size=self.size)
+            self.bg = Rectangle(source='bg4.png', pos=self.pos, size=self.size)
             self.bind(size=self._update_bg, pos=self._update_bg)
 
         # Add back button
@@ -136,7 +137,7 @@ class AbakadaScreen(Screen):
 
         # Background image
         with self.canvas.before:
-            self.bg = Rectangle(source='bg3.png', pos=self.pos, size=self.size)
+            self.bg = Rectangle(source='bg4.png', pos=self.pos, size=self.size)
             self.bind(size=self._update_bg, pos=self._update_bg)
 
         # Add help button
@@ -211,7 +212,7 @@ class AlpabetongPilipinoScreen(Screen):
 
         # Background image
         with self.canvas.before:
-            self.bg = Rectangle(source='bg3.png', pos=self.pos, size=self.size)
+            self.bg = Rectangle(source='bg4.png', pos=self.pos, size=self.size)
             self.bind(size=self._update_bg, pos=self._update_bg)
 
         # Add help button
@@ -304,7 +305,7 @@ class PinasokNaSalitaScreen(Screen):
 
         # Background image
         with self.canvas.before:
-            self.bg = Rectangle(source='bg3.png', pos=self.pos, size=self.size)
+            self.bg = Rectangle(source='bg4.png', pos=self.pos, size=self.size)
             self.bind(size=self._update_bg, pos=self._update_bg)
 
         # Add back button
@@ -317,12 +318,12 @@ class PinasokNaSalitaScreen(Screen):
         self.add_widget(label)
 
         # Create a ScrollView
-        self.scroll_view = ScrollView(size_hint=(None, None), size=(Window.width * 0.8, Window.height * 0.6), pos_hint={'center_x': 0.5, 'center_y': 0.4}, bar_color=[0, 0, 0, 1])
+        self.scroll_view = ScrollView(size_hint=(None, None), size=(Window.width * 0.8, Window.height * 0.6), pos_hint={'center_x': 0.5, 'center_y': 0.4}, bar_color=[88/255, 101/255, 242/255, 1])
 
         # Create a layout for recorded words and their syllabification
         self.container_layout = GridLayout(cols=1, spacing=10, size_hint_y=None)
         with self.container_layout.canvas.before:
-            Color(198 / 255, 205 / 255, 255 / 255, 1)  # RGBA values for the desired background color
+            Color(49 / 255, 51 / 255, 56 / 255, 1)  # RGBA values for the desired background color
             self.rect = Rectangle(pos=self.container_layout.pos, size=self.container_layout.size)
         self.container_layout.bind(pos=self._update_rect, size=self._update_rect)
         self.container_layout.bind(minimum_height=self.container_layout.setter('height'))  # Allow the layout to expand in height based on content
@@ -339,8 +340,8 @@ class PinasokNaSalitaScreen(Screen):
 
         for recorded_word in self.recorded_words:
             syllabified_word = '-'.join(syllabify(recorded_word))  # Syllabify the recorded word
-            recorded_word_label = Label(text=recorded_word, font_size=16, size_hint_y=None, height=dp(30), halign='left', color=[0, 0, 0, 1])
-            syllabified_word_label = Label(text=syllabified_word, font_size=16, size_hint_y=None, height=dp(30), halign='right', color=[0, 0, 0, 1])
+            recorded_word_label = Label(text=recorded_word, font_size=16, size_hint_y=None, height=dp(30), halign='left')
+            syllabified_word_label = Label(text=syllabified_word, font_size=16, size_hint_y=None, height=dp(30), halign='right')
             
             # Create a custom widget for each row
             row_widget = RowWidget()
@@ -356,6 +357,253 @@ class PinasokNaSalitaScreen(Screen):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
 
+class LinedLabel(BoxLayout):
+    def __init__(self, text='', font_name=None, font_size=None, **kwargs):
+        super(LinedLabel, self).__init__(**kwargs)
+        self.orientation = 'vertical'
+
+        self.label = Label(text=text, font_name=font_name, font_size=font_size)
+        self.add_widget(self.label)
+
+        with self.canvas.before:
+            Color(1, 1, 1, 1)  # Black color
+            self.line = Line()
+
+        self.bind(size=self._update_line)
+        self.bind(pos=self._update_line)
+
+    def _update_line(self, *args):
+        # Adjust the y-coordinate to move the line higher by 10 pixels
+        y_coordinate = self.y + self.height - 65
+        self.line.points = [self.x, y_coordinate, self.x + self.width, y_coordinate]
+        
+class HatiinSaMgaPantigScreen(Screen):
+    def __init__(self, **kwargs):
+        super(HatiinSaMgaPantigScreen, self).__init__(**kwargs)
+
+        # Load the TensorFlow model
+        self.model = tf.keras.models.load_model('my_model.h5')
+
+        # Background image
+        with self.canvas.before:
+            self.bg = Rectangle(source='bg4.png', pos=self.pos, size=self.size)
+            self.bind(size=self._update_bg, pos=self._update_bg)
+
+        # Add help button
+        help_button = Button(size_hint=(None, None), size=(60, 60), background_normal='help.png', pos=(Window.width - 70, Window.height - 85))
+        help_button.bind(on_release=lambda x: setattr(self.manager, 'current', 'help'))
+        self.add_widget(help_button)
+
+        # Add back button
+        back_button = Button(size_hint=(None, None), size=(60, 60), background_normal='back.png', pos=(10, Window.height - 85))
+        back_button.bind(on_release=lambda x: setattr(self.manager, 'current', 'menu'))
+        self.add_widget(back_button)
+
+        # Add label with centered text
+        label = Label(text="HATIIN SA MGA PANTIG", font_name="transportm.ttf", font_size=30, size_hint=(None, None), size=(Window.width, 100), pos_hint={'center_x': 0.5, 'top': 0.9}, halign='center')
+        self.add_widget(label)
+
+        # Add mock camera image (replace with actual camera implementation if available)
+        self.camera_image = Image(source='logo2.png', size_hint=(0.4, 0.4), pos_hint={'center_x': 0.3, 'center_y': 0.5})
+        self.add_widget(self.camera_image)
+
+        # Add input line for displaying the predicted word or letter
+        self.input_label = LinedLabel(text=" ", font_name="transportm.ttf", font_size=20, size_hint=(None, None), size=(300, 100), pos_hint={'center_x': 0.7, 'center_y': 0.5})
+        self.add_widget(self.input_label)
+        
+        # Add label for syllabification
+        self.syllabified_label = Label(text=" ", font_name="transportm.ttf", font_size=20, size_hint=(None, None), size=(300, 100), pos_hint={'center_x': 0.7, 'center_y': 0.45})
+        self.add_widget(self.syllabified_label)
+
+        # Add ScrollView for default words
+        scroll_view = ScrollView(size_hint=(None, None), size=(Window.width * 0.6, Window.height * 0.2), pos_hint={'center_x': 0.5, 'center_y': 0.15})
+        scroll_layout = GridLayout(cols=3, spacing=5, size_hint_y=None)
+        scroll_layout.bind(minimum_height=scroll_layout.setter('height'))
+
+        # Default words
+        default_words = [
+            "aso", "araw", "anak", "aral", "ama", "asawa", "bala", "bata", "bahay", "baga", 
+            "babae", "baboy", "bago", "baka", "binti", "bigas", "buko", "bulaklak", "bundok", 
+            "dahon", "daga", "damit", "dalaga", "daliri", "dilaw", "duyan", "gabi", "ginto", 
+            "gulay", "guro", "hangin", "ilaw", "ilog", "ina", "isda", "itim", "kamay", "kanin", 
+            "kama", "kanta", "katotohanan", "kape", "kotse", "lamesa", "langit", "laro", "lapis", 
+            "langka", "laban", "likod", "lupa", "lolo", "lola", "lungkot", "mahal", "malakas", 
+            "malusog", "mangga", "mano", "mata", "matamis", "mainit", "maitim", "mabait", "mabuti", 
+            "mangkok", "mesa", "musika", "nagtatanong", "nanay", "niyog", "nobela", "otso", "oras", 
+            "puno", "pera", "puso", "pula", "puno", "pagkain", "papel", "payong", "paa", "pag-ibig", 
+            "pag-aalaga", "pakikipagkaibigan", "pagkakaibigan", "pagkakaintindihan", "pagkakaiba", 
+            "pagkakaintindi", "pagkakamali", "pag-asa", "pagsasama", "pagtutulungan", "pag-usapan", 
+            "pagtatapos", "pagtuturo", "walis", "yelo", "paglalakbay"
+        ]
+
+        # Add default words to the ScrollView
+        for word in default_words:
+            word_button = RoundedButton(text=word.upper(), font_size=12, size_hint=(None, None), size=(150, 30))
+            word_button.bind(on_release=lambda btn: self.display_default_word(btn.text))
+            scroll_layout.add_widget(word_button)
+
+        scroll_view.add_widget(scroll_layout)
+        self.add_widget(scroll_view)
+
+        # Schedule the prediction updates
+        """Clock.schedule_interval(self.update_prediction, 1.0 / 30.0)  # Update at 30 FPS"""
+
+    def _update_bg(self, instance, value):
+        self.bg.pos = self.pos
+        self.bg.size = self.size
+
+    def display_default_word(self, word):
+        self.input_label.label.text = f"{word}"
+        self.syllabified_label.text = f"{'-'.join(syllabify(word))}"
+
+        # Update recorded words in PinasokNaSalitaScreen
+        pinasok_na_salita_screen = self.manager.get_screen('pinasok_na_salita')
+        pinasok_na_salita_screen.update_recorded_words(pinasok_na_salita_screen.recorded_words + [word])
+
+    """def update_prediction(self, dt):
+        # Placeholder for capturing frame from the camera (or load an image from file for this example)
+        # Replace with actual camera frame capture logic
+        img_path = 'D:\E kix\AnYe portfolio\codes\hotdog\htest\A.jpg'
+        input_image = PILImage.open(img_path).resize((150, 150))
+        input_image = img_to_array(input_image)
+        input_image = np.expand_dims(input_image, axis=0)
+        input_image = input_image / 255.0  # Normalize
+
+        # Get prediction
+        prediction = self.model.predict(input_image)
+        predicted_letter = chr(np.argmax(prediction) + 65)  # Convert prediction index to corresponding letter
+
+        self.input_label.text = f"Predicted: {predicted_letter}"
+
+        # Update the recorded words in PinasokNaSalitaScreen
+        pinasok_na_salita_screen = self.manager.get_screen('pinasok_na_salita')
+        pinasok_na_salita_screen.update_recorded_words(pinasok_na_salita_screen.recorded_words + [predicted_letter])
+"""
+class HelpScreen(Screen):
+    def __init__(self, **kwargs):
+        super(HelpScreen, self).__init__(**kwargs)
+
+        # Background image
+        with self.canvas.before:
+            self.bg = Rectangle(source='bg4.png', pos=self.pos, size=self.size)
+            self.bind(size=self._update_bg, pos=self._update_bg)
+
+        # Add back button
+        back_button = Button(size_hint=(None, None), size=(60, 60), background_normal='back.png', pos=(10, Window.height - 85))
+        back_button.bind(on_release=lambda x: setattr(self.manager, 'current', 'hatiin_sa_mga_pantig'))
+        self.add_widget(back_button)
+
+        # Create a FloatLayout to hold background and container
+        layout = FloatLayout()
+
+        # Background color for container
+        with layout.canvas.before:
+            Color(49 / 255, 51 / 255, 56 / 255, 1)
+            self.rect = Rectangle(pos=(Window.width * 0.1, Window.height * 0.1), size=(Window.width * 0.8, Window.height * 0.75))
+
+        # Add "Help" icon
+        help_icon = Image(source='help.png', size_hint=(None, None), size=(35, 35), pos_hint={'center_x': 0.5, 'top': 0.815})
+        layout.add_widget(help_icon)
+
+        # Add label with centered text
+        help_label = Label(text="HELP", font_name="transportm.ttf", font_size=30, size_hint=(None, None), size=(Window.width, 100), pos_hint={'center_x': 0.5, 'top': 0.805}, halign='center')
+        layout.add_widget(help_label)
+
+        # Create GridLayout for help content
+        help_content_layout = GridLayout(cols=2, spacing=5, size_hint=(None, None), size=(Window.width * 0.6, Window.height * 0.5), pos_hint={'center_x': 0.5, 'center_y': 0.4})
+        help_content_layout.bind(minimum_height=help_content_layout.setter('height'))
+
+        # Add labels for help content
+        help_content = [
+            ("LETTER Q KEY", "NEXT HAND SPELLING"),
+            ("BACKSPACE KEY", "REMOVE PREVIOUS LETTER"),
+            ("ENTER KEY", "FINISH INPUTTING HAND SPELLS"),
+            ("LETTER R KEY", "REMOVE INPUT")
+        ]
+
+        for left_text, right_text in help_content:
+            left_label = Label(text=left_text, font_size=16, size_hint=(None, None), size=(Window.width * 0.3, 50), halign='left', text_size=(Window.width * 0.25, None))
+            right_label = Label(text=right_text, font_size=16, size_hint=(None, None), size=(Window.width * 0.3, 50), halign='left', text_size=(Window.width * 0.25, None))
+            help_content_layout.add_widget(left_label)
+            help_content_layout.add_widget(right_label)
+
+        # Add help content layout to the main layout
+        layout.add_widget(help_content_layout)
+
+        # Add the layout to the screen
+        self.add_widget(layout)
+
+    def _update_bg(self, instance, value):
+        self.bg.pos = self.pos
+        self.bg.size = self.size
+    
+    def _update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
+
+class HelpScreen2(Screen):
+    def __init__(self, **kwargs):
+        super(HelpScreen2, self).__init__(**kwargs)
+
+        # Background image
+        with self.canvas.before:
+            self.bg = Rectangle(source='bg4.png', pos=self.pos, size=self.size)
+            self.bind(size=self._update_bg, pos=self._update_bg)
+
+        # Add back button
+        back_button = Button(size_hint=(None, None), size=(60, 60), background_normal='back.png', pos=(10, Window.height - 85))
+        back_button.bind(on_release=lambda x: setattr(self.manager, 'current', 'hatiin_sa_mga_pantig'))
+        self.add_widget(back_button)
+
+        # Create a FloatLayout to hold background and container
+        layout = FloatLayout()
+
+        # Background color for container
+        with layout.canvas.before:
+            Color(49 / 255, 51 / 255, 56 / 255, 1)
+            self.rect = Rectangle(pos=(Window.width * 0.1, Window.height * 0.1), size=(Window.width * 0.8, Window.height * 0.75))
+
+        # Add "Help" icon
+        help_icon = Image(source='help.png', size_hint=(None, None), size=(35, 35), pos_hint={'center_x': 0.5, 'top': 0.815})
+        layout.add_widget(help_icon)
+
+        # Add label with centered text
+        help_label = Label(text="HELP", font_name="transportm.ttf", font_size=30, size_hint=(None, None), size=(Window.width, 100), pos_hint={'center_x': 0.5, 'top': 0.805}, halign='center')
+        layout.add_widget(help_label)
+
+        # Create GridLayout for help content
+        help_content_layout = GridLayout(cols=2, spacing=5, size_hint=(None, None), size=(Window.width * 0.6, Window.height * 0.5), pos_hint={'center_x': 0.5, 'center_y': 0.4})
+        help_content_layout.bind(minimum_height=help_content_layout.setter('height'))
+
+        # Add labels for help content
+        help_content = [
+            ("LETTER Q KEY", "NEXT HAND SPELLING"),
+            ("BACKSPACE KEY", "REMOVE PREVIOUS LETTER"),
+            ("ENTER KEY", "FINISH INPUTTING HAND SPELLS"),
+            ("LETTER R KEY", "REMOVE INPUT"),
+            ("LETTER W KEY", "ADD '-' INPUT")
+        ]
+
+        for left_text, right_text in help_content:
+            left_label = Label(text=left_text, font_size=16, size_hint=(None, None), size=(Window.width * 0.3, 50), halign='left', text_size=(Window.width * 0.25, None))
+            right_label = Label(text=right_text, font_size=16, size_hint=(None, None), size=(Window.width * 0.3, 50), halign='left', text_size=(Window.width * 0.25, None))
+            help_content_layout.add_widget(left_label)
+            help_content_layout.add_widget(right_label)
+
+        # Add help content layout to the main layout
+        layout.add_widget(help_content_layout)
+
+        # Add the layout to the screen
+        self.add_widget(layout)
+
+    def _update_bg(self, instance, value):
+        self.bg.pos = self.pos
+        self.bg.size = self.size
+    
+    def _update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
+        
 class SignLanguageApp(App):
     def build(self):
         sm = ScreenManager()
@@ -364,6 +612,9 @@ class SignLanguageApp(App):
         sm.add_widget(AbakadaScreen(name='abakada'))  # Add the AbakadaScreen
         sm.add_widget(AlpabetongPilipinoScreen(name='alpabetong_pilipino')) 
         sm.add_widget(PinasokNaSalitaScreen(name='pinasok_na_salita')) 
+        sm.add_widget(HatiinSaMgaPantigScreen(name='hatiin_sa_mga_pantig'))
+        sm.add_widget(HelpScreen(name='help'))
+        sm.add_widget(HelpScreen2(name='help2'))
         return sm
 
 # Run the Kivy application
