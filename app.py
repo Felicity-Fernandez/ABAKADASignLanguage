@@ -382,6 +382,10 @@ class HatiinSaMgaPantigScreen(Screen):
     def __init__(self, **kwargs):
         super(HatiinSaMgaPantigScreen, self).__init__(**kwargs)
 
+        # Ensure keyboard inputs are handled
+        self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
+        self._keyboard.bind(on_key_down=self._on_key_down)
+
         # Load the TensorFlow model
         self.model = tf.keras.models.load_model('my_model.h5')
 
@@ -460,6 +464,57 @@ class HatiinSaMgaPantigScreen(Screen):
         # Update recorded words in PinasokNaSalitaScreen
         pinasok_na_salita_screen = self.manager.get_screen('pinasok_na_salita')
         pinasok_na_salita_screen.update_recorded_words(pinasok_na_salita_screen.recorded_words + [word])
+
+    def _keyboard_closed(self):
+        self._keyboard.unbind(on_key_down=self._on_key_down)
+        self._keyboard = None
+
+    def _on_key_down(self, keyboard, keycode, text, modifiers):
+        # Handle key inputs
+        if keycode[1] == 'q':
+            self._next_hand_spelling()
+        elif keycode[1] == 'backspace':
+            self._remove_previous_letter()
+        elif keycode[1] == 'enter':
+            self._finish_inputting_hand_spells()
+        elif keycode[1] == 'r':
+            self._remove_input()
+        return True
+
+    def _next_hand_spelling(self):
+        # Add another predicted letter next to the current predicted letters
+        img_path = 'D:\E kix\AnYe portfolio\codes\hotdog\htest\A.jpg'
+        input_image = PILImage.open(img_path).resize((150, 150))
+        input_image = img_to_array(input_image)
+        input_image = np.expand_dims(input_image, axis=0)
+        input_image = input_image / 255.0  # Normalize
+
+        # Get prediction
+        prediction = self.model.predict(input_image)
+        predicted_letter = chr(np.argmax(prediction) + 65)  # Convert prediction index to corresponding letter
+
+        # Display the predicted letter in the syllabified label
+        self.input_label.label.text += predicted_letter
+
+    def _remove_previous_letter(self):
+        # Remove the previous letter in the syllabified label
+        self.input_label.label.text = self.input_label.label.text[:-1]
+
+    def _finish_inputting_hand_spells(self):
+        # Finish inputting hand spells
+        # Get the entered word from the input label
+        entered_word = self.input_label.label.text.strip()
+
+        # Store the entered word in PinasokNaSalitaScreen
+        pinasok_na_salita_screen = self.manager.get_screen('pinasok_na_salita')
+        pinasok_na_salita_screen.update_recorded_words([entered_word])
+
+        # Clear the input label for the next input
+        self.input_label.label.text = ""
+
+    def _remove_input(self):
+        # Remove all input in the syllabified label
+        self.input_label.label.text = ""
 
     """def update_prediction(self, dt):
         # Placeholder for capturing frame from the camera (or load an image from file for this example)
