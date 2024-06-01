@@ -70,6 +70,7 @@ class MenuScreen(Screen):
         button4 = RoundedButton(text="HATIIN SA MGA PANTIG", font_size=20, size_hint=(None, None), size=(250, 30))
 
         # Bind buttons to transition to Screens
+        button1.bind(on_release=lambda x: setattr(self.manager, 'current', 'pagpapantig')) 
         button2.bind(on_release=lambda x: setattr(self.manager, 'current', 'second'))  # Go to the next page when button2 is clicked
         button3.bind(on_release=lambda x: setattr(self.manager, 'current', 'pinasok_na_salita'))
         button4.bind(on_release=lambda x: setattr(self.manager, 'current', 'hatiin_sa_mga_pantig'))
@@ -541,6 +542,174 @@ class HelpScreen(Screen):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
 
+class PagpapantigScreen(Screen):
+    def __init__(self, **kwargs):
+        super(PagpapantigScreen, self).__init__(**kwargs)
+
+        # Ensure keyboard inputs are handled
+        self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
+        self._keyboard.bind(on_key_down=self._on_key_down)
+
+        # Load the TensorFlow model
+        self.model = tf.keras.models.load_model('my_model.h5')
+
+        # Background image
+        with self.canvas.before:
+            self.bg = Rectangle(source='bg4.png', pos=self.pos, size=self.size)
+            self.bind(size=self._update_bg, pos=self._update_bg)
+
+        # Add help button
+        help_button = Button(size_hint=(None, None), size=(60, 60), background_normal='help.png', pos=(Window.width - 70, Window.height - 85))
+        help_button.bind(on_release=lambda x: setattr(self.manager, 'current', 'help2'))
+        self.add_widget(help_button)
+
+        # Add back button
+        back_button = Button(size_hint=(None, None), size=(60, 60), background_normal='back.png', pos=(10, Window.height - 85))
+        back_button.bind(on_release=lambda x: setattr(self.manager, 'current', 'menu'))
+        self.add_widget(back_button)
+
+        # Add label with centered text
+        label = Label(text="PAGPAPANTIG", font_name="transportm.ttf", font_size=30, size_hint=(None, None), size=(Window.width, 100), pos_hint={'center_x': 0.5, 'top': 0.9}, halign='center')
+        self.add_widget(label)
+
+        # Add mock camera image (replace with actual camera implementation if available)
+        self.camera_image = Image(source='logo2.png', size_hint=(0.4, 0.4), pos_hint={'center_x': 0.3, 'center_y': 0.5})
+        self.add_widget(self.camera_image)
+
+        # Add input line for displaying the predicted word or letter
+        self.syllabified_label = LinedLabel(text=" ", font_name="transportm.ttf", font_size=20, size_hint=(None, None), size=(300, 100), pos_hint={'center_x': 0.7, 'center_y': 0.5})
+        self.add_widget(self.syllabified_label)
+        
+        # Add label for default words
+        self.input_label = Label(text=" ", font_name="transportm.ttf", font_size=20, size_hint=(None, None), size=(300, 100), pos_hint={'center_x': 0.7, 'center_y': 0.45})
+        self.add_widget(self.input_label)
+
+        # Add ScrollView for default words
+        scroll_view = ScrollView(size_hint=(None, None), size=(Window.width * 0.6, Window.height * 0.2), pos_hint={'center_x': 0.5, 'center_y': 0.15})
+        scroll_layout = GridLayout(cols=3, spacing=5, size_hint_y=None)
+        scroll_layout.bind(minimum_height=scroll_layout.setter('height'))
+
+        # Default words
+        default_words = [
+            "aso", "araw", "anak", "aral", "ama", "asawa", "bala", "bata", "bahay", "baga", 
+            "babae", "baboy", "bago", "baka", "binti", "bigas", "buko", "bulaklak", "bundok", 
+            "dahon", "daga", "damit", "dalaga", "daliri", "dilaw", "duyan", "gabi", "ginto", 
+            "gulay", "guro", "hangin", "ilaw", "ilog", "ina", "isda", "itim", "kamay", "kanin", 
+            "kama", "kanta", "katotohanan", "kape", "kotse", "lamesa", "langit", "laro", "lapis", 
+            "langka", "laban", "likod", "lupa", "lolo", "lola", "lungkot", "mahal", "malakas", 
+            "malusog", "mangga", "mano", "mata", "matamis", "mainit", "maitim", "mabait", "mabuti", 
+            "mangkok", "mesa", "musika", "nagtatanong", "nanay", "niyog", "nobela", "otso", "oras", 
+            "puno", "pera", "puso", "pula", "puno", "pagkain", "papel", "payong", "paa", "pag-ibig", 
+            "pag-aalaga", "pakikipagkaibigan", "pagkakaibigan", "pagkakaintindihan", "pagkakaiba", 
+            "pagkakaintindi", "pagkakamali", "pag-asa", "pagsasama", "pagtutulungan", "pag-usapan", 
+            "pagtatapos", "pagtuturo", "walis", "yelo", "paglalakbay"
+        ]
+
+        # Add default words to the ScrollView
+        for word in default_words:
+            word_button = RoundedButton(text=word.upper(), font_size=12, size_hint=(None, None), size=(150, 30))
+            word_button.bind(on_release=lambda btn: self.display_default_word(btn.text))
+            scroll_layout.add_widget(word_button)
+
+        scroll_view.add_widget(scroll_layout)
+        self.add_widget(scroll_view)
+
+        # Schedule the prediction updates
+        """Clock.schedule_interval(self.update_prediction, 1.0 / 30.0)  # Update at 30 FPS"""
+
+    def _update_bg(self, instance, value):
+        self.bg.pos = self.pos
+        self.bg.size = self.size
+
+    def display_default_word(self, word):
+        self.input_label.text = f"{word}"
+
+    def _keyboard_closed(self):
+        self._keyboard.unbind(on_key_down=self._on_key_down)
+        self._keyboard = None
+
+    def _on_key_down(self, keyboard, keycode, text, modifiers):
+        # Handle key inputs
+        if keycode[1] == 'q':
+            self._next_hand_spelling()
+        elif keycode[1] == 'backspace':
+            self._remove_previous_letter()
+        elif keycode[1] == 'enter':
+            self._finish_inputting_hand_spells()
+        elif keycode[1] == 'r':
+            self._remove_input()
+        elif keycode[1] == 'w':
+            self._add_dash()
+        return True
+
+    def _next_hand_spelling(self):
+        # Add another predicted letter next to the current predicted letters
+        img_path = 'D:\E kix\AnYe portfolio\codes\hotdog\htest\A.jpg'
+        input_image = PILImage.open(img_path).resize((150, 150))
+        input_image = img_to_array(input_image)
+        input_image = np.expand_dims(input_image, axis=0)
+        input_image = input_image / 255.0  # Normalize
+
+        # Get prediction
+        prediction = self.model.predict(input_image)
+        predicted_letter = chr(np.argmax(prediction) + 65)  # Convert prediction index to corresponding letter
+
+        # Display the predicted letter in the syllabified label
+        self.syllabified_label.label.text += predicted_letter
+
+    def _remove_previous_letter(self):
+        # Remove the previous letter in the syllabified label
+        if self.syllabified_label.label.text:
+            # Clear the outline completely
+            self.input_label.canvas.before.clear()
+            self.syllabified_label.label.text = self.syllabified_label.label.text[:-1]
+
+    def _finish_inputting_hand_spells(self):
+        # Finish inputting hand spells and check correctness
+        user_input = self.syllabified_label.label.text.strip().lower()
+        correct_syllabification = '-'.join(syllabify(self.input_label.text)).lower()
+        # Check if the entered text matches the correct syllabification
+        is_correct = user_input == correct_syllabification
+
+        # Update the outline color based on correctness
+        self._update_input_label_outline(is_correct)
+
+    def _remove_input(self):
+        # Remove all input in the syllabified label
+        self.syllabified_label.label.text = ""
+        # Clear the outline completely
+        self.input_label.canvas.before.clear()
+
+    def _add_dash(self):
+        # Add a dash to the syllabified label
+        self.syllabified_label.label.text += "-"
+
+    def _update_input_label_outline(self, is_correct):
+        # Clear previous outline
+        self.input_label.canvas.before.clear()
+        with self.input_label.canvas.before:
+            if is_correct:
+                Color(0, 1, 0, 1)  # Green color
+            else:
+                Color(1, 0, 0, 1)  # Red color
+            Line(rectangle=(self.input_label.x, self.input_label.y, self.input_label.width, self.input_label.height), width=2)
+
+    """def update_prediction(self, dt):
+        # Placeholder for capturing frame from the camera (or load an image from file for this example)
+        # Replace with actual camera frame capture logic
+        img_path = 'D:\E kix\AnYe portfolio\codes\hotdog\htest\A.jpg'
+        input_image = PILImage.open(img_path).resize((150, 150))
+        input_image = img_to_array(input_image)
+        input_image = np.expand_dims(input_image, axis=0)
+        input_image = input_image / 255.0  # Normalize
+
+        # Get prediction
+        prediction = self.model.predict(input_image)
+        predicted_letter = chr(np.argmax(prediction) + 65)  # Convert prediction index to corresponding letter
+
+        # Display the predicted letter in the syllabified label
+        self.syllabified_label.text = predicted_letter
+    """
 class HelpScreen2(Screen):
     def __init__(self, **kwargs):
         super(HelpScreen2, self).__init__(**kwargs)
@@ -614,6 +783,7 @@ class SignLanguageApp(App):
         sm.add_widget(PinasokNaSalitaScreen(name='pinasok_na_salita')) 
         sm.add_widget(HatiinSaMgaPantigScreen(name='hatiin_sa_mga_pantig'))
         sm.add_widget(HelpScreen(name='help'))
+        sm.add_widget(PagpapantigScreen(name='pagpapantig'))
         sm.add_widget(HelpScreen2(name='help2'))
         return sm
 
