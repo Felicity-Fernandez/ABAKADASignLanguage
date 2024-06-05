@@ -10,7 +10,7 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.screenmanager import Screen, ScreenManager
-from kivy.core.camera import Camera
+from kivy.uix.camera import Camera
 from kivy.uix.scrollview import ScrollView
 from kivy.clock import Clock
 import tensorflow as tf
@@ -22,6 +22,8 @@ from PIL import Image as PILImage
 from kivy.metrics import dp
 import re
 from Syllabify import syllabify 
+import cv2
+from kivy.graphics.texture import Texture
 
 
 class RoundedButton(Button):
@@ -132,10 +134,25 @@ class SecondScreen(Screen):
 class AbakadaScreen(Screen):
     def __init__(self, **kwargs):
         super(AbakadaScreen, self).__init__(**kwargs)
-
+        self.frame_counter = 0  # Counter to track the number of frames processed
         # Load the TensorFlow model
-        self.model = tf.keras.models.load_model('my_model.h5')
+        self.model = tf.keras.models.load_model('best_model.h5')
+        self.hand_cascade = cv2.CascadeClassifier('aGest.xml')
+        # Check if the model is loaded correctly
+        print(self.model.summary())
 
+        # Test the model with a known image
+        test_image = cv2.imread('D:/E kix/AnYe portfolio/codes/hotdog/htest/C.jpg')
+        test_image = cv2.resize(test_image, (150, 150))
+        test_image = img_to_array(test_image)
+        test_image = np.expand_dims(test_image, axis=0)
+        test_image = test_image / 255.0  # Normalize
+
+        # Get prediction for the test image
+        test_prediction = self.model.predict(test_image)
+        test_predicted_index = np.argmax(test_prediction)
+        print(f"Test prediction: {test_prediction}")
+        print(f"Test predicted letter: {chr(test_predicted_index + 65)}")
         # Background image
         with self.canvas.before:
             self.bg = Rectangle(source='bg4.png', pos=self.pos, size=self.size)
@@ -154,12 +171,18 @@ class AbakadaScreen(Screen):
         label = Label(text="ABAKADA", font_name="transportm.ttf", font_size=30, size_hint=(None, None), size=(Window.width, 100), pos_hint={'center_x': 0.5, 'top': 0.9}, halign='center')
         self.add_widget(label)
 
-        # Add mock camera image (replace with actual camera implementation if available)
-        self.camera_image = Image(source='logo2.png', size_hint=(0.4, 0.4), pos_hint={'center_x': 0.3, 'center_y': 0.5})
-        self.add_widget(self.camera_image)
+        # Attempt to initialize camera
+        try:
+            self.camera = Camera(play=True, resolution=(640, 480), size_hint=(0.4, 0.4), pos_hint={'center_x': 0.3, 'center_y': 0.5})
+            self.add_widget(self.camera)
+        except Exception as e:
+            print(f"Failed to initialize camera: {e}")
+            self.camera = None
+            error_label = Label(text="Failed to initialize camera", font_name="transportm.ttf", font_size=20, size_hint=(None, None), size=(300, 100), pos_hint={'center_x': 0.3, 'center_y': 0.5})
+            self.add_widget(error_label)
 
         # Add label for predictions
-        self.prediction_label = Label(text="Predicted: ", font_name="transportm.ttf", font_size=20, size_hint=(None, None), size=(200, 100), pos_hint={'center_x': 0.7, 'center_y': 0.5})
+        self.prediction_label = Label(text="", font_name="transportm.ttf", font_size=20, size_hint=(None, None), size=(200, 100), pos_hint={'center_x': 0.7, 'center_y': 0.5})
         self.add_widget(self.prediction_label)
 
         # Add ScrollView for alphabet images
@@ -170,8 +193,14 @@ class AbakadaScreen(Screen):
         # Path to the folder containing the alphabet images
         alphabet_folder = 'D:/E kix/AnYe portfolio/codes/hotdog/htest'
 
+        # Create a list of letters
+        letters = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+
+        # Insert NTILDE after 'N'
+        letters.insert(letters.index('N') + 1, 'NTILDE')
+
         # Add alphabet images to the ScrollView
-        for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
+        for letter in letters:
             image_path = os.path.join(alphabet_folder, f'{letter}.jpg')
             letter_image = Image(source=image_path, size_hint=(None, None), size=(50, 50))
             label = Label(text=letter, size_hint=(None, None), size=(50, 20), halign='center', valign='middle')  # Add label with image name
@@ -183,26 +212,68 @@ class AbakadaScreen(Screen):
         scroll_view.add_widget(scroll_layout)
         self.add_widget(scroll_view)
 
-        # Schedule the prediction updates
-        Clock.schedule_interval(self.update_prediction, 1.0 / 30.0)  # Update at 30 FPS
+        # Initialize update_event to None
+        self.update_event = None
+
+    def on_enter(self):
+        # Schedule the prediction updates when the screen is active
+        self.update_event = Clock.schedule_interval(self.update_prediction, 1.0 / 30.0)  # Update at 30 FPS
+
+    def on_leave(self):
+        # Stop the prediction updates when the screen is not active
+        if self.update_event:
+            self.update_event.cancel()
+            self.update_event = None
 
     def _update_bg(self, instance, value):
         self.bg.pos = self.pos
         self.bg.size = self.size
 
     def update_prediction(self, dt):
-        # Placeholder for capturing frame from the camera (or load an image from file for this example)
-        # Replace with actual camera frame capture logic
-        img_path = 'D:\E kix\AnYe portfolio\codes\hotdog\htest\X.jpg'
-        input_image = PILImage.open(img_path).resize((150, 150))
-        input_image = img_to_array(input_image)
-        input_image = np.expand_dims(input_image, axis=0)
-        input_image = input_image / 255.0  # Normalize
+        # Capture frame from the camera
+        camera_texture = self.camera.texture
+        if camera_texture and camera_texture.size[0] > 0 and camera_texture.size[1] > 0:
+            camera_pixels = camera_texture.pixels
+            width, height = camera_texture.size
+            input_image = np.frombuffer(camera_pixels, np.uint8).reshape(height, width, 4)
+            input_image = input_image[:, :, :3]  # Remove alpha channel
 
-        # Get prediction
-        prediction = self.model.predict(input_image)
-        predicted_letter = chr(np.argmax(prediction) + 65)  # Convert prediction index to corresponding letter
-        self.prediction_label.text = f"Predicted: {predicted_letter}"
+            # Convert to grayscale for hand detection
+            gray_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2GRAY)
+
+            # Detect hands using Haar cascade
+            hands = self.hand_cascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+            if len(hands) == 0:
+                print("No hand detected!")  # Debugging
+                self.prediction_label.text = "No hand present"
+                return
+
+            # For simplicity, assume only one hand is detected
+            x, y, w, h = hands[0]
+
+            # Crop and resize the detected hand region
+            hand_region = input_image[y:y+h, x:x+w]
+            hand_region = cv2.resize(hand_region, (150, 150))
+            hand_region = img_to_array(hand_region)
+            hand_region = np.expand_dims(hand_region, axis=0)
+            hand_region = hand_region / 255.0  # Normalize
+
+            # Get prediction
+            prediction = self.model.predict(hand_region)
+            predicted_index = np.argmax(prediction)  # Get the index of the highest probability
+            max_confidence = np.max(prediction)  # Get the highest confidence level
+            if max_confidence < 0.2:  # Set a threshold for confidence level
+                print("Low confidence prediction!")  # Debugging
+                self.prediction_label.text = "No significant prediction"
+            else:
+                predicted_letter = chr(predicted_index + 65)  # Convert prediction index to corresponding letter
+                print(f"Prediction probabilities: {prediction}")
+                print(f"Predicted letter: {predicted_letter}")  # Debugging
+                self.prediction_label.text = f"{predicted_letter}"
+        else:
+            print("No hand detected!")  # Debugging
+            self.prediction_label.text = "No hand present"
 
 class AlpabetongPilipinoScreen(Screen):
     def __init__(self, **kwargs):
